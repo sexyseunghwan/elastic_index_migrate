@@ -1,6 +1,7 @@
 pub use std::env;
 pub use std::io::Write;
 pub use std::time::Duration;
+pub use std::sync::Arc;
 
 pub use log::{info, error};
 

@@ -62,11 +62,11 @@ impl EsHelper {
     /*
     
     */
-    pub async fn set_cluster_mapping_query(&self, index_name: &str, mapper_info: Value) -> Result<(), anyhow::Error> {
+    pub async fn set_cluster_mapping_query(&self, old_index_name: &str, new_index_name: &str, mapper_info: Value) -> Result<(), anyhow::Error> {
 
         for es_obj in self.mon_es_pool.iter() {
 
-            match es_obj.set_node_mapping_query(index_name, &mapper_info).await {
+            match es_obj.set_node_mapping_query(old_index_name, new_index_name, &mapper_info).await {
                 Ok(resp) => return Ok(resp),
                 Err(err) => {
                     error!("{:?}", err);      
@@ -81,21 +81,21 @@ impl EsHelper {
     /*
     
     */
-    // pub async fn set_cluster_bulk_query(&self, ) -> Result<(), anyhow::Error> {
-
-    //     for es_obj in self.mon_es_pool.iter() {
-
-    //         match es_obj.set_node_mapping_query(index_name, &mapper_info).await {
-    //             Ok(resp) => return Ok(resp),
-    //             Err(err) => {
-    //                 error!("{:?}", err);      
-    //                 continue;
-    //             }
-    //         }   
-    //     }
+    pub async fn set_cluster_bulk_query(&self, index_name: &str, bulk_body: &Vec<BulkOperation<Value>>) -> Result<(), anyhow::Error> {
         
-    //     Err(anyhow!("All Elasticsearch connections failed"))
-    // }
+        for es_obj in self.mon_es_pool.iter() {
+
+            match es_obj.set_node_bulk_query(index_name, bulk_body).await {
+                Ok(resp) => return Ok(resp),
+                Err(err) => {
+                    error!("{:?}", err);      
+                    continue;
+                }
+            }   
+        }
+        
+        Err(anyhow!("All Elasticsearch connections failed"))
+    }
 
     
     /*
@@ -121,48 +121,64 @@ impl EsHelper {
 
 
 impl EsObj {
-
-
+    
     /*
         Function that EXECUTES elasticsearch queries - mapping
     */
     async fn get_node_mapping_query(&self, index_name: &str) -> Result<Value, anyhow::Error> {
 
-        let mapping_response = self.es_pool.indices().get_mapping(IndicesGetMappingParts::Index(&[index_name])).send().await?;
-        let mapping_body = mapping_response.json::<serde_json::Value>().await?;
-                  
-        Ok(mapping_body)
+        let response = self.es_pool.indices().get_mapping(IndicesGetMappingParts::Index(&[index_name])).send().await?;
+        
+        if response.status_code().is_success() { 
+            let response_body = response.json::<serde_json::Value>().await?;
+            Ok(response_body)
+        } else {
+            Err(anyhow!("response status is failed : {:?}", response))
+        }
     }
-
     
     /*
 
     */
-    async fn set_node_mapping_query(&self, index_name: &str, mapper_info: &Value) -> Result<(), anyhow::Error> {
+    async fn set_node_mapping_query(&self, old_index_name: &str, new_index_name: &str, mapper_info: &Value) -> Result<(), anyhow::Error> {
 
-        self.es_pool.indices().create(IndicesCreateParts::Index(index_name))
-            .body(mapper_info).send().await?;
-    
-        Ok(())
+        let properties = mapper_info[old_index_name]["mappings"]["properties"].clone();
+
+        let new_mapping = json!({
+            "mappings": {
+                "properties": properties
+            }
+        });
+
+        let response = self.es_pool.indices().create(IndicesCreateParts::Index(new_index_name))
+            .body(new_mapping).send().await?;
+        
+        if response.status_code().is_success() { 
+            Ok(())
+        } else {
+            Err(anyhow!("response status is failed : {:?}", response))
+        }
     }
 
     /*
     
     */
-    async fn set_node_bulk_query(&self, index_name: &str, bulk_body: Vec<BulkOperation<Value>>) -> Result<(), anyhow::Error> {
+    async fn set_node_bulk_query(&self, index_name: &str, bulk_body: &Vec<BulkOperation<Value>>) -> Result<(), anyhow::Error> {
         
-        //let bulk_body = Body::new(bulk_body);
-        //let body = NdBody::new(bulk_body);
-        //let body = Body::from(Bytes::from(bulk_body));
+        let operations = bulk_body.iter().map(|op| op).collect::<Vec<_>>(); // Re-collect after cloning
         
-        self.es_pool.bulk(BulkParts::Index(index_name))
-            .body(bulk_body)
+        let response = self.es_pool.bulk(BulkParts::Index(index_name))
+            .body(operations)
             .send()
             .await?;
         
-        Ok(())
+        if response.status_code().is_success() { 
+            Ok(())
+        } else {
+            Err(anyhow!("response status is failed : {:?}", response))
+        }
     }
-
+    
     /*
         Function that EXECUTES elasticsearch queries - search
     */

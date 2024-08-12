@@ -9,7 +9,7 @@ use crate::service::re_index::*;
 pub async fn main_controller() {
 
     info!("elastic_index_migrate start");
-
+    
     // Select compilation environment
     dotenv().ok();
 
