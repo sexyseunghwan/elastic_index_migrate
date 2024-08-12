@@ -1,6 +1,7 @@
 use crate::common::*;
 
 use crate::service::es_service::*;
+use crate::service::re_index::*;
 
 /*
 
@@ -40,73 +41,14 @@ pub async fn main_controller() {
         }
     };
     
-    let from_index_name = "consuming_index_prod_new_copy";
-    let to_index_name = "consuming_index_prod_new_copy_2";
+    let index_name = "consuming_index_prod_new_copy";
+    let new_index_name = "consuming_index_prod_new_copy_2";
     
-    let mapper_info = match from_es_client.get_cluster_mapping_query(from_index_name).await {
-        Ok(res) => res,
-        Err(err) => {
-            error!("{:?}", err);
-            panic!("{:?}", err);
-        }
-    };
-
-    //println!("{:?}", mapper_info);
-
-    let es_query = json!({
-        "query" : {
-            "match_all": {}
-            },
-        "size" : 10000
-        }
-    );
-    
-    let search_res = match from_es_client.get_cluster_search_query(es_query, from_index_name).await {
-        Ok(search_res) => search_res,
-        Err(err) => {
-            error!("{:?}", err);
-            panic!("{:?}", err);
-        }
-    };
-    
-    //info!("{:?}", search_res);
-    match to_es_client.set_cluster_mapping_query(to_index_name, mapper_info).await {
+    match re_index_start(&from_es_client, &to_es_client, index_name, new_index_name).await {
         Ok(_) => (),
         Err(err) => {
-            error!("{:?}", err);
-            panic!("{:?}", err);
-        } 
-    }
-    
-    let documents = match search_res["hits"]["hits"].as_array() {
-        Some(documents) => documents,
-        None => {
-            error!("documents is empty");
-            panic!("documents is empty");
+            panic!("{:?}", err) 
         }
-    };
-    
-    println!("{:?}", documents);
-    
-    let hits = &search_res["hits"]["hits"];
-
-    //let mut bulk_body = Vec::new();
-    
-    // for hit in hits.as_array().unwrap() {
-    //     let action = json!({ "index": { "_index": "new_index", "_id": hit["_id"] } });
-    //     bulk_body.extend(to_vec(&action)?);
-    //     bulk_body.extend(b"\n");
-    //     bulk_body.extend(to_vec(&hit["_source"])?);
-    //     bulk_body.extend(b"\n");
-    // }
-    
-    // let mut bulk_body = Vec::new();
-    
-    // for doc in documents {
-    //     let index_action = json!({ "index": { "_index": to_index_name, "_id": doc["_id"] } });
-    //     bulk_body.push(json!(index_action));
-    //     bulk_body.push(doc["_source"].clone());
-    // }
-    
+    }
     
 }

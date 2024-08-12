@@ -17,10 +17,12 @@ pub use elasticsearch::{
 };
 pub use elasticsearch::http::transport::TransportBuilder;
 pub use elasticsearch::http::Url;
-pub use elasticsearch::{SearchParts, IndexParts, DeleteParts, BulkParts};
+pub use elasticsearch::{SearchParts, IndexParts, DeleteParts, BulkParts, BulkOperation};
 pub use elasticsearch::indices::{IndicesGetMappingParts, IndicesCreateParts};
 
 pub use anyhow::{Result, anyhow, Context};
 
 pub use getset::Getters;
 pub use derive_new::new;
+
+pub use bytes::{Bytes, BytesMut};

@@ -149,15 +149,19 @@ impl EsObj {
     /*
     
     */
-    // async fn set_node_bulk_query(&self, index_name: &str, bulk_body: Vec<Value>) -> Result<(), anyhow::Error> {
-
-    //     self.es_pool.bulk(BulkParts::Index(index_name))
-    //         .body(bulk_body)
-    //         .send()
-    //         .await?;
-
-    //     Ok(())
-    // }
+    async fn set_node_bulk_query(&self, index_name: &str, bulk_body: Vec<BulkOperation<Value>>) -> Result<(), anyhow::Error> {
+        
+        //let bulk_body = Body::new(bulk_body);
+        //let body = NdBody::new(bulk_body);
+        //let body = Body::from(Bytes::from(bulk_body));
+        
+        self.es_pool.bulk(BulkParts::Index(index_name))
+            .body(bulk_body)
+            .send()
+            .await?;
+        
+        Ok(())
+    }
 
     /*
         Function that EXECUTES elasticsearch queries - search
