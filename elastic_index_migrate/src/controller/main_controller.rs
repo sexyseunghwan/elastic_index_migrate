@@ -41,8 +41,8 @@ pub async fn main_controller() {
         }
     };
     
-    let index_name = "consuming_index_prod_new_copy";
-    let new_index_name = "consuming_index_prod_new_copy_2";
+    let index_name = "meal_check_index";
+    let new_index_name = "meal_check_index";
     
     match re_index_start(&from_es_client, &to_es_client, index_name, new_index_name).await {
         Ok(_) => (),
