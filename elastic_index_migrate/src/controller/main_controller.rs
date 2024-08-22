@@ -23,7 +23,7 @@ pub async fn main_controller() {
 
     
     // Elasticsearch connection
-    // 1. 
+    // 1. from connection
     let from_es_client: EsHelper = match EsHelper::new(from_es_host, &from_es_id, &from_es_pw) {
         Ok(mysql_client) => mysql_client,
         Err(err) => {
